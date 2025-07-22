@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.env
+
+# Environment & Secrets
+.env
+*.json
+venv/
+
+# OS-specific
+.DS_Store
+
+# FaceMatch credentials
+credentials.json
+
+# VSCode or IDE
+.vscode/
+.idea/
+
+# Flask cache
+instance/
+*.db
+
+# Git
+.git/

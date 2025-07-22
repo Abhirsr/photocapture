@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Face Matcher</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"
+    ></script>
+  </head>
+  <body>
+    <div id="particles-js"></div>
+
+    <!-- Mobile Hamburger Menu for Admin Access -->
+    <!-- Removed mobile admin menu for admin access from user UI -->
+
+    <div
+      class="top-bar"
+      style="
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        position: absolute;
+        top: 0;
+        left: 0;
+        padding: 16px 24px;
+        z-index: 10;
+      "
+    >
+      <!-- Removed admin login/dashboard links from user UI -->
+    </div>
+    <div class="container">
+      <img
+        class="top-banner"
+        src="{{ url_for('static', filename='Kanchi.jpg') }}"
+        alt="image"
+      />
+      <h1>Sri Kanchi Kamakoti Peetam</h1>
+      <p>Capture your face and we’ll upload matching images to Google Drive.</p>
+
+      <div id="form-section">
+        <!-- REMOVED: Drive link upload for users. Now only admin can upload from dashboard. -->
+
+        <!-- 📷 Camera Feed -->
+        <div class="video-box">
+          <video id="video" autoplay></video>
+          <canvas id="canvas" style="display: none"></canvas>
+        </div>
+
+        <!-- 📸 Capture Button -->
+        <button onclick="capture()" class="btn">📸 Capture & Match</button>
+      </div>
+      <!-- Debug: Show captured frames here -->
+      <div
+        id="frames-preview"
+        style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 20px"
+      ></div>
+      <!-- Ensure loading overlay is always present and not replaced -->
+      <div id="loading" class="overlay">
+        <div class="loader-box">
+          <div class="spinner"></div>
+          <p id="pickup-line">Finding your beautiful matches... 💘</p>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='particles.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+      // Mobile Admin Menu Functions
+      function showMobileAdminMenu() {
+        document.getElementById("mobileAdminMenu").style.display = "flex";
+      }
+
+      function closeMobileAdminMenu() {
+        document.getElementById("mobileAdminMenu").style.display = "none";
+      }
+
+      // Close menu when clicking outside
+      // document
+      //   .getElementById("mobileAdminMenu")
+      //   .addEventListener("click", function (e) {
+      //     if (e.target === this) {
+      //       closeMobileAdminMenu();
+      //     }
+      //   });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Admin Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #007bff;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        min-height: 100vh;
+      }
+      .dashboard-container {
+        display: flex;
+        min-height: 100vh;
+      }
+      .sidebar {
+        width: 270px;
+        background: rgba(34, 45, 50, 0.55);
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        padding-top: 40px;
+        position: relative;
+        box-shadow: 2px 0 24px rgba(44, 62, 80, 0.12);
+        z-index: 2;
+        border-top-right-radius: 32px;
+        border-bottom-right-radius: 32px;
+        backdrop-filter: blur(18px) saturate(160%);
+        -webkit-backdrop-filter: blur(18px) saturate(160%);
+        border-left: 2px solid rgba(255, 255, 255, 0.08);
+        border-right: 2px solid rgba(255, 255, 255, 0.12);
+        transition: background 0.4s;
+      }
+      .sidebar h2 {
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 1.6em;
+        letter-spacing: 1px;
+        font-weight: 700;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+      }
+      .sidebar-nav {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+      .sidebar button {
+        background: none;
+        border: none;
+        color: #fff;
+        padding: 18px 30px;
+        text-align: left;
+        width: 100%;
+        font-size: 1.13em;
+        cursor: pointer;
+        transition: color 0.2s;
+        position: relative;
+        z-index: 1;
+        outline: none;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+      }
+      .sidebar button.active,
+      .sidebar button:hover {
+        color: #ffd86b;
+      }
+      .sidebar .highlight {
+        position: absolute;
+        margin-top: 110px;
+        left: 0;
+        width: 100%;
+        height: 54px;
+        background: linear-gradient(
+          90deg,
+          rgba(255, 216, 107, 0.85) 0%,
+          rgba(255, 179, 71, 0.85) 100%
+        );
+        border-radius: 0 30px 30px 0;
+        box-shadow: 0 2px 16px rgba(255, 216, 107, 0.13);
+        transition: top 0.45s cubic-bezier(0.77, 0, 0.18, 1), background 0.3s,
+          opacity 0.3s;
+        z-index: 0;
+        opacity: 0.3;
+      }
+      .sidebar .logout-link {
+        margin-top: auto;
+        padding: 18px 30px;
+        background: rgba(231, 76, 60, 0.85);
+        color: #fff;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 0 0 0 0;
+        font-weight: bold;
+        display: block;
+        transition: background 0.2s, box-shadow 0.2s;
+        box-shadow: 0 2px 12px rgba(231, 76, 60, 0.1);
+        letter-spacing: 0.5px;
+      }
+      .sidebar .logout-link:hover {
+        background: #c0392b;
+      }
+      .main-content {
+        flex: 1;
+        padding: 60px 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        background: none;
+      }
+      .glass-section {
+        display: none;
+        width: 100%;
+        max-width: 520px;
+        background: rgba(255, 255, 255, 0.45);
+        border-radius: 22px;
+        box-shadow: 0 8px 32px rgba(44, 62, 80, 0.13);
+        padding: 48px 38px;
+        margin-bottom: 30px;
+        backdrop-filter: blur(16px) saturate(180%);
+        -webkit-backdrop-filter: blur(16px) saturate(180%);
+        border: 1.5px solid rgba(255, 255, 255, 0.18);
+        animation: fadeSlideIn 0.7s cubic-bezier(0.77, 0, 0.18, 1);
+      }
+      .glass-section.active {
+        display: block !important;
+        z-index: 1000; /* Increased for stacking */
+        position: relative !important;
+        min-height: 200px;
+        opacity: 1 !important;
+        visibility: visible !important;
+        /* Ensures section is always visible when active */
+      }
+      .btn {
+        width: 100%;
+        padding: 15px;
+        border-radius: 10px;
+        border: none;
+        font-weight: bold;
+        font-size: 1.08em;
+        cursor: pointer;
+        margin-top: 10px;
+        box-shadow: 0 2px 12px rgba(44, 62, 80, 0.08);
+        transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+        letter-spacing: 0.5px;
+      }
+      .btn:active {
+        transform: scale(0.97);
+      }
+      .delete-btn {
+        background-color: #e74c3c;
+        color: #fff;
+      }
+      .delete-btn:hover {
+        background-color: #c0392b;
+      }
+      .upload-btn {
+        background-color: #007bff;
+        color: #fff;
+      }
+      .upload-btn:hover {
+        background-color: #0056b3;
+      }
+      .cred-btn {
+        background-color: #27ae60;
+        color: #fff;
+      }
+      .cred-btn:hover {
+        background-color: #219150;
+      }
+      input[type="text"],
+      input[type="file"] {
+        border: 1.5px solid rgba(224, 224, 224, 0.7);
+        border-radius: 8px;
+        padding: 13px;
+        font-size: 1em;
+        margin-bottom: 12px;
+        width: 100%;
+        box-sizing: border-box;
+        transition: border 0.2s, box-shadow 0.2s;
+        background: rgba(255, 255, 255, 0.7);
+        box-shadow: 0 1px 6px rgba(44, 62, 80, 0.04);
+      }
+      input[type="text"]:focus,
+      input[type="file"]:focus {
+        border: 1.5px solid #ffd86b;
+        outline: none;
+        box-shadow: 0 2px 12px rgba(255, 216, 107, 0.13);
+      }
+      @media (max-width: 700px) {
+        @media (max-width: 700px) {
+          .hamburger {
+            display: flex;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 2000; /* Make sure it's above the sidebar */
+          }
+        }
+        .dashboard-container {
+          flex-direction: column;
+          min-height: 100vh;
+        }
+        .hamburger {
+          display: flex;
+        }
+        .sidebar {
+          width: 280px;
+          position: fixed;
+          left: -280px;
+          top: 0;
+          height: 100vh;
+          flex-direction: column;
+          padding: 80px 20px 20px 20px;
+          border-radius: 0;
+          max-height: none;
+          overflow-y: auto;
+          transition: left 0.3s ease;
+          z-index: 1001;
+        }
+        .sidebar.active {
+          left: 0;
+        }
+        .sidebar h2 {
+          display: block;
+          font-size: 1.4em;
+          margin-bottom: 20px;
+        }
+        .sidebar-nav {
+          flex-direction: column;
+          gap: 8px;
+          width: 100%;
+        }
+        .sidebar button,
+        .sidebar .logout-link {
+          flex: none;
+          padding: 12px 15px;
+          font-size: 0.95em;
+          margin: 2px 0;
+          width: 100%;
+          text-align: left;
+        }
+        .sidebar .highlight {
+          display: none;
+        }
+        .main-content {
+          padding: 80px 15px 15px 15px;
+          flex: 1;
+          width: 100%;
+        }
+        .glass-section {
+          padding: 20px 15px;
+          margin-bottom: 15px;
+        }
+        .glass-section h2 {
+          font-size: 1.3em;
+          margin-bottom: 15px;
+        }
+        .btn {
+          padding: 12px;
+          font-size: 0.95em;
+        }
+        input[type="text"],
+        input[type="file"],
+        input[type="email"],
+        input[type="password"] {
+          padding: 10px;
+          font-size: 0.9em;
+          margin-bottom: 10px;
+        }
+        /* Table responsive */
+        table {
+          font-size: 0.8em;
+        }
+        th,
+        td {
+          padding: 6px 4px !important;
+        }
+        /* User logs section mobile */
+        #userLogsSection {
+          padding: 0;
+        }
+        #userLogsSection > div:first-child {
+          padding: 15px 10px 10px 10px;
+          flex-direction: column;
+          gap: 10px;
+        }
+        #userLogsSearch {
+          min-width: 100%;
+          max-width: 100%;
+          font-size: 0.9em;
+        }
+        #userLogsTable {
+          font-size: 0.75em;
+        }
+        #userLogsTable th,
+        #userLogsTable td {
+          padding: 6px 3px !important;
+        }
+      }
+
+      /* Enhanced mobile responsive design */
+      @media (max-width: 600px) {
+        .sidebar {
+          width: 260px;
+          left: -260px;
+          padding: 70px 15px 15px 15px;
+        }
+        .sidebar h2 {
+          font-size: 1.2em;
+          margin-bottom: 15px;
+        }
+        .sidebar button,
+        .sidebar .logout-link {
+          padding: 10px 12px;
+          font-size: 0.85em;
+        }
+        .main-content {
+          padding: 70px 10px 10px 10px;
+        }
+        .glass-section {
+          padding: 15px 12px;
+          margin-bottom: 12px;
+        }
+        .glass-section h2 {
+          font-size: 1.2em;
+          margin-bottom: 12px;
+        }
+        .btn {
+          padding: 10px;
+          font-size: 0.9em;
+        }
+        input[type="text"],
+        input[type="file"],
+        input[type="email"],
+        input[type="password"] {
+          padding: 8px;
+          font-size: 0.85em;
+          margin-bottom: 8px;
+        }
+        /* Table responsive */
+        table {
+          font-size: 0.75em;
+        }
+        th,
+        td {
+          padding: 5px 3px !important;
+        }
+        /* User logs section mobile */
+        #userLogsSection {
+          padding: 0;
+        }
+        #userLogsSection > div:first-child {
+          padding: 12px 8px 8px 8px;
+          flex-direction: column;
+          gap: 8px;
+        }
+        #userLogsSearch {
+          min-width: 100%;
+          max-width: 100%;
+          font-size: 0.85em;
+        }
+        #userLogsTable {
+          font-size: 0.7em;
+        }
+        #userLogsTable th,
+        #userLogsTable td {
+          padding: 5px 2px !important;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .hamburger {
+          top: 15px;
+          left: 15px;
+          padding: 8px;
+        }
+        .hamburger span {
+          width: 22px;
+          height: 2px;
+        }
+        .sidebar {
+          width: 240px;
+          left: -240px;
+          padding: 60px 12px 12px 12px;
+        }
+        .sidebar h2 {
+          font-size: 1.1em;
+          margin-bottom: 12px;
+        }
+        .sidebar button,
+        .sidebar .logout-link {
+          padding: 8px 10px;
+          font-size: 0.8em;
+          margin: 1px 0;
+        }
+        .main-content {
+          padding: 60px 8px 8px 8px;
+        }
+        .glass-section {
+          padding: 12px 10px;
+          margin-bottom: 10px;
+        }
+        .glass-section h2 {
+          font-size: 1.1em;
+          margin-bottom: 10px;
+        }
+        .btn {
+          padding: 8px;
+          font-size: 0.85em;
+        }
+        input[type="text"],
+        input[type="file"],
+        input[type="email"],
+        input[type="password"] {
+          padding: 6px;
+          font-size: 0.8em;
+          margin-bottom: 6px;
+        }
+        table {
+          font-size: 0.7em;
+        }
+        th,
+        td {
+          padding: 4px 2px !important;
+        }
+        #userLogsTable {
+          font-size: 0.65em;
+        }
+        #userLogsTable th,
+        #userLogsTable td {
+          padding: 4px 1px !important;
+        }
+      }
+      @keyframes fadeSlideIn {
+        from {
+          opacity: 0;
+          transform: translateY(40px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      /* Hamburger menu styles */
+      .hamburger {
+        display: none;
+        flex-direction: column;
+        cursor: pointer;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;
+        backdrop-filter: blur(10px);
+      }
+
+      .hamburger span {
+        width: 25px;
+        height: 3px;
+        background: #fff;
+        margin: 3px 0;
+        transition: 0.3s;
+        border-radius: 2px;
+      }
+
+      .hamburger.active span:nth-child(1) {
+        transform: rotate(-45deg) translate(-5px, 6px);
+      }
+
+      .hamburger.active span:nth-child(2) {
+        opacity: 0;
+      }
+
+      .hamburger.active span:nth-child(3) {
+        transform: rotate(45deg) translate(-5px, -6px);
+      }
+
+      .mobile-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="particles-js"></div>
+    <!-- Hamburger Menu -->
+    <div class="hamburger" id="hamburger">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <div class="dashboard-container">
+      <div class="sidebar" id="sidebar">
+        <h2>Admin Panel</h2>
+        <div class="sidebar-nav" style="position: relative">
+          <div class="highlight" id="sidebarHighlight" style="top: 0"></div>
+          <button id="uploadTab" class="active" onclick="showSection('upload')">
+            Upload Folder
+          </button>
+          <button
+            id="galleryTab"
+            onclick="showSection('gallery')"
+            style="margin-top: 8px"
+          >
+            Manage Gallery
+          </button>
+          <button
+            id="userLogsTab"
+            onclick="showSection('userLogs')"
+            style="margin-top: 8px"
+          >
+            User Logs
+          </button>
+          <!-- # Change Password Sidebar Option -->
+          <button
+            id="changePasswordTab"
+            onclick="showSection('changePassword')"
+            style="margin-top: 8px"
+          >
+            Change Password
+          </button>
+        </div>
+        <a href="{{ url_for('admin_logout') }}" class="logout-link">Logout</a>
+      </div>
+      <div class="main-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh;">
+        <!-- # Upload Folder Section (Dropdown: Upload Folder) -->
+        <div class="glass-section active" id="upload-gallery-section">
+          <h2>Upload Gallery (Zip or Folder)</h2>
+          <form id="galleryUploadForm" enctype="multipart/form-data">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+              <button type="button" id="chooseImagesBtn" class="btn upload-btn" style="flex:1;">Upload Images/Zip</button>
+              <button type="button" id="chooseFolderBtn" class="btn upload-btn" style="flex:1;">Upload Folder</button>
+            </div>
+            <input
+              type="file"
+              id="galleryInput"
+              name="gallery_files"
+              style="display:none;"
+            />
+            <button type="submit" class="btn upload-btn">Upload</button>
+          </form>
+          <div id="galleryUploadMsg" style="margin-top: 10px"></div>
+        <script>
+          const galleryInput = document.getElementById('galleryInput');
+          const chooseImagesBtn = document.getElementById('chooseImagesBtn');
+          const chooseFolderBtn = document.getElementById('chooseFolderBtn');
+          let lastUploadMode = 'images';
+
+          chooseImagesBtn.onclick = function() {
+            galleryInput.removeAttribute('webkitdirectory');
+            galleryInput.removeAttribute('directory');
+            galleryInput.setAttribute('multiple', '');
+            galleryInput.setAttribute('accept', '.jpg,.jpeg,.png,.gif,.bmp,.webp,.zip');
+            lastUploadMode = 'images';
+            galleryInput.value = '';
+            galleryInput.click();
+          };
+          chooseFolderBtn.onclick = function() {
+            galleryInput.setAttribute('webkitdirectory', '');
+            galleryInput.setAttribute('directory', '');
+            galleryInput.removeAttribute('accept');
+            galleryInput.setAttribute('multiple', '');
+            lastUploadMode = 'folder';
+            galleryInput.value = '';
+            galleryInput.click();
+          };
+
+          document.getElementById('galleryUploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const msg = document.getElementById('galleryUploadMsg');
+            if (!galleryInput.files.length) {
+              msg.textContent = 'Please select files or a folder.';
+              msg.style.color = 'red';
+              return;
+            }
+            const formData = new FormData();
+            if (lastUploadMode === 'images' && galleryInput.files.length === 1 && galleryInput.files[0].name.endsWith('.zip')) {
+              formData.append('gallery_zip', galleryInput.files[0]);
+            } else if (lastUploadMode === 'folder') {
+              for (let i = 0; i < galleryInput.files.length; i++) {
+                formData.append('gallery_files', galleryInput.files[i], galleryInput.files[i].webkitRelativePath || galleryInput.files[i].name);
+              }
+            } else {
+              for (let i = 0; i < galleryInput.files.length; i++) {
+                formData.append('gallery_files', galleryInput.files[i], galleryInput.files[i].name);
+              }
+            }
+            msg.textContent = 'Uploading...';
+            msg.style.color = '#007bff';
+            try {
+              const res = await fetch('/admin/upload_gallery', {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+              });
+              const data = await res.json();
+              if (data.status === 'ok') {
+                msg.textContent = '✅ Gallery uploaded!';
+                msg.style.color = 'green';
+              } else {
+                msg.textContent = '❌ ' + (data.message || 'Upload failed.');
+                msg.style.color = 'red';
+              }
+            } catch (err) {
+              msg.textContent = '❌ Upload error.';
+              msg.style.color = 'red';
+            }
+          });
+        </script>
+
+          <div
+            style="
+              background: rgba(255, 255, 255, 0.7);
+              border-radius: 12px;
+              padding: 18px 22px 10px 22px;
+              box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+            "
+          >
+            <b>Gallery Images:</b>
+            {% if gallery_images %}
+            <span style="color: #27ae60; font-weight: 600"
+              >({{ gallery_images|length }}) images present</span
+            >
+            <div
+              style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px"
+            >
+              {% for img in gallery_images[:6] %}
+              <img
+                src="{{ url_for('static', filename='gallery/' ~ img) }}"
+                alt="gallery image"
+                style="
+                  width: 48px;
+                  height: 48px;
+                  object-fit: cover;
+                  border-radius: 6px;
+                  box-shadow: 0 1px 4px rgba(44, 62, 80, 0.1);
+                "
+              />
+              {% endfor %} {% if gallery_images|length > 6 %}
+              <span style="align-self: center; font-size: 1.1em; color: #888"
+                >+{{ gallery_images|length-6 }} more</span
+              >
+              {% endif %}
+            </div>
+            {% else %}
+            <span style="color: #e74c3c; font-weight: 600"
+              >No images in gallery</span
+            >
+            {% endif %}
+          </div>
+        </div>
+        <!-- # Manage Gallery Section (Dropdown: Manage Gallery) -->
+        <div class="glass-section" id="gallery-management-section">
+          <h2>Manage Gallery Images</h2>
+          <div
+            id="galleryGrid"
+            style="width: 100%; max-width: 900px; margin: 0 auto 24px auto;display:ruby;"
+          ></div>
+          <div id="galleryMsg" style="margin-bottom: 10px"></div>
+        </div>
+        <script>
+          async function loadGalleryImages() {
+            const grid = document.getElementById("galleryGrid");
+            const msg = document.getElementById("galleryMsg");
+            grid.innerHTML = "";
+            msg.textContent = "";
+            try {
+              const res = await fetch("/admin/list_gallery_images", {
+                credentials: "same-origin",
+              });
+              const data = await res.json();
+              if (data.status === "ok") {
+                if (data.images.length === 0) {
+                  msg.textContent = "No images in gallery.";
+                  return;
+                }
+                data.images.forEach((filename) => {
+                  const card = document.createElement("div");
+                  card.style.position = "relative";
+                  card.style.width = "120px";
+                  card.style.height = "120px";
+                  card.style.border = "1px solid #ccc";
+                  card.style.borderRadius = "10px";
+                  card.style.overflow = "hidden";
+                  card.style.background = "#fff";
+                  card.style.display = "flex";
+                  card.style.alignItems = "center";
+                  card.style.justifyContent = "center";
+                  card.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+                  card.style.marginBottom = "8px";
+
+                  const img = document.createElement("img");
+                  img.src = "/static/gallery/" + encodeURIComponent(filename);
+                  img.alt = filename;
+                  img.style.maxWidth = "100%";
+                  img.style.maxHeight = "100%";
+                  img.style.objectFit = "cover";
+                  img.title = filename;
+                  img.onclick = () => window.open(img.src, "_blank");
+                  card.appendChild(img);
+
+                  const delBtn = document.createElement("button");
+                  delBtn.textContent = "🗑️";
+                  delBtn.title = "Delete image";
+                  delBtn.style.position = "absolute";
+                  delBtn.style.top = "6px";
+                  delBtn.style.right = "6px";
+                  delBtn.style.background = "#e74c3c";
+                  delBtn.style.color = "#fff";
+                  delBtn.style.border = "none";
+                  delBtn.style.borderRadius = "50%";
+                  delBtn.style.width = "28px";
+                  delBtn.style.height = "28px";
+                  delBtn.style.cursor = "pointer";
+                  delBtn.style.fontSize = "1.1em";
+                  delBtn.onclick = async (ev) => {
+                    ev.stopPropagation();
+                    if (!confirm("Delete this image?")) return;
+                    delBtn.disabled = true;
+                    delBtn.textContent = "...";
+                    const resp = await fetch("/admin/delete_gallery_image", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      credentials: "same-origin",
+                      body: JSON.stringify({ filename }),
+                    });
+                    const result = await resp.json();
+                    if (result.status === "ok") {
+                      card.remove();
+                      msg.textContent = "Image deleted.";
+                    } else {
+                      msg.textContent =
+                        "❌ " + (result.message || "Delete failed.");
+                      delBtn.disabled = false;
+                      delBtn.textContent = "🗑️";
+                    }
+                  };
+                  card.appendChild(delBtn);
+
+                  grid.appendChild(card);
+                  console.log("Added card for:", filename);
+                });
+              } else {
+                msg.textContent =
+                  "❌ " + (data.message || "Could not load images.");
+              }
+            } catch (err) {
+              msg.textContent = "❌ Error loading images.";
+            }
+          }
+          // Load gallery images on page load
+          // window.addEventListener("DOMContentLoaded", loadGalleryImages);
+        </script>
+        <!-- # User Logs Section (Dropdown: User Logs) -->
+        <div
+      id="userLogsSection"
+      class="glass-section"
+      style="
+        max-width: 900px;
+        margin: auto;
+        box-shadow: 0 8px 32px rgba(44, 62, 80, 0.18);
+        padding: 0;
+      "
+    >
+      <div
+        style="
+          height: 7px;
+          width: 100%;
+          background: linear-gradient(90deg, #ffd86b 0%, #ffb347 100%);
+          border-radius: 22px 22px 0 0;
+        "
+      ></div>
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 28px 32px 10px 32px;
+        "
+      >
+        <div style="display: flex; align-items: center; gap: 14px">
+          <span style="font-size: 2em">📋</span>
+          <span
+            style="
+              font-size: 1.35em;
+              font-weight: 700;
+              letter-spacing: 0.5px;
+              color: #232526;
+            "
+            >User Logs</span
+          >
+        </div>
+        <div style="position: relative">
+          <input
+            id="userLogsSearch"
+            type="text"
+            placeholder="Search by email..."
+            style="
+              padding: 9px 32px 9px 36px;
+              border-radius: 8px;
+              border: 1.5px solid #e0e0e0;
+              font-size: 1em;
+              min-width: 180px;
+              max-width: 220px;
+              background: rgba(255, 255, 255, 0.92);
+              box-shadow: 0 1px 4px rgba(44, 62, 80, 0.07);
+              outline: none;
+            "
+          />
+          <span
+            style="
+              position: absolute;
+              left: 10px;
+              top: 50%;
+              transform: translateY(-50%);
+              color: #bbb;
+              font-size: 1.1em;
+            "
+            >🔍</span
+          >
+        </div>
+      </div>
+      <div style="overflow-x: auto; padding: 0 18px 28px 18px">
+        <table
+          id="userLogsTable"
+          style="
+            width: 100%;
+            margin-top: 18px;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+          "
+        >
+          <thead>
+            <tr style="background: #f4f6f8">
+              <th
+                style="
+                  padding: 14px 10px;
+                  font-size: 1.08em;
+                  color: #232526;
+                "
+              >
+                Email
+              </th>
+              <th
+                style="
+                  padding: 14px 10px;
+                  font-size: 1.08em;
+                  color: #232526;
+                "
+              >
+                Status
+              </th>
+              <th
+                style="
+                  padding: 14px 10px;
+                  font-size: 1.08em;
+                  color: #232526;
+                "
+              >
+                Matched Files
+              </th>
+              <th
+                style="
+                  padding: 14px 10px;
+                  font-size: 1.08em;
+                  color: #232526;
+                "
+              >
+                Zip URL
+              </th>
+              <th
+                style="
+                  padding: 14px 10px;
+                  font-size: 1.08em;
+                  color: #232526;
+                "
+              >
+                Created At
+              </th>
+            </tr>
+          </thead>
+          <tbody id="userLogsTableBody">
+            <!-- User log rows will be loaded by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+        <!-- # Change Password Section (Dropdown: Change Password) -->
+        <div class="glass-section" id="changePasswordSection">
+          <h2>Change Password</h2>
+          <form id="changePasswordForm" style="max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px;">
+            <input type="password" id="currentPassword" placeholder="Current Password" required style="padding: 12px; border-radius: 8px; border: 1.5px solid #ccc;" />
+            <input type="password" id="newPassword" placeholder="New Password" required style="padding: 12px; border-radius: 8px; border: 1.5px solid #ccc;" />
+            <input type="password" id="confirmPassword" placeholder="Confirm New Password" required style="padding: 12px; border-radius: 8px; border: 1.5px solid #ccc;" />
+            <button type="submit" class="btn cred-btn">Change Password</button>
+            <div id="changePasswordMsg" style="margin-top: 8px;"></div>
+          </form>
+        </div>
+      </div>
+    <script src="{{ url_for('static', filename='particles.js') }}"></script>
+    <script>
+      if (window.particlesJS) {
+        particlesJS.load('particles-js', '{{ url_for('static', filename='particles.json') }}');
+      }
+    </script>
+    <script>
+      // Sidebar highlight animation with glassmorphism and smooth transitions
+      const uploadTab = document.getElementById("uploadTab");
+      const galleryTab = document.getElementById("galleryTab");
+      const userLogsTab = document.getElementById("userLogsTab");
+      const changePasswordTab = document.getElementById("changePasswordTab");
+      const highlight = document.getElementById("sidebarHighlight");
+      const sections = {
+        upload: document.getElementById("upload-gallery-section"),
+        gallery: document.getElementById("gallery-management-section"),
+        userLogs: document.getElementById("userLogsSection"),
+        changePassword: document.getElementById("changePasswordSection"),
+      };
+      function moveHighlight(tab) {
+        const offset = tab.offsetTop - tab.parentElement.offsetTop;
+        highlight.style.top = offset + "px";
+      }
+
+      function animateSectionIn(section) {
+        section.classList.remove("active");
+        section.style.opacity = 0;
+        section.style.transform = "translateY(40px) scale(0.98)";
+        setTimeout(() => {
+          section.classList.add("active");
+          section.style.transition = "opacity 0.5s, transform 0.5s";
+          section.style.opacity = 1;
+          section.style.transform = "translateY(0) scale(1)";
+        }, 60);
+      }
+
+      function showSection(section) {
+        console.log("Switching to section:", section);
+        document
+          .querySelectorAll(".glass-section")
+          .forEach((sec) => sec.classList.remove("active"));
+        uploadTab.classList.remove("active");
+        galleryTab.classList.remove("active");
+        userLogsTab.classList.remove("active");
+        changePasswordTab.classList.remove("active");
+
+        // Check if we're on mobile (hide highlight on mobile)
+        const isMobile = window.innerWidth <= 700;
+        if (isMobile) {
+          highlight.style.display = "none";
+        } else {
+          highlight.style.display = "block";
+        }
+
+        if (section === "upload") {
+          uploadTab.classList.add("active");
+          document
+            .getElementById("upload-gallery-section")
+            .classList.add("active");
+          if (!isMobile) moveHighlight(uploadTab);
+        } else if (section === "gallery") {
+          galleryTab.classList.add("active");
+          document
+            .getElementById("gallery-management-section")
+            .classList.add("active");
+          if (!isMobile) moveHighlight(galleryTab);
+          loadGalleryImages();
+        } else if (section === "userLogs") {
+          userLogsTab.classList.add("active");
+          const userLogsSection = document.getElementById("userLogsSection");
+          userLogsSection.classList.add("active");
+          if (!isMobile) moveHighlight(userLogsTab);
+          loadUserLogs();
+          console.log(
+            "userLogsSection should now be visible:",
+            userLogsSection
+          );
+        } else if (section === "changePassword") {
+          changePasswordTab.classList.add("active");
+          document.getElementById("changePasswordSection").classList.add("active");
+          if (!isMobile) moveHighlight(changePasswordTab);
+        }
+      }
+
+      // Initial highlight position and glass fade-in
+      window.onload = function () {
+        const isMobile = window.innerWidth <= 700;
+        if (isMobile) {
+          highlight.style.display = "none";
+        } else {
+          highlight.style.display = "block";
+          moveHighlight(uploadTab);
+        }
+        setTimeout(() => {
+          document.querySelectorAll(".glass-section").forEach((sec) => {
+            sec.style.opacity = 1;
+          });
+        }, 100);
+        // Find which tab is active and show that section
+        if (galleryTab.classList.contains("active")) {
+          showSection("gallery");
+        } else if (userLogsTab.classList.contains("active")) {
+          showSection("userLogs");
+        } else if (changePasswordTab.classList.contains("active")) {
+          showSection("changePassword");
+        } else {
+          showSection("upload");
+        }
+      };
+
+      // Responsive: recalculate highlight on resize
+      window.onresize = function () {
+        const isMobile = window.innerWidth <= 700;
+        if (isMobile) {
+          highlight.style.display = "none";
+        } else {
+          highlight.style.display = "block";
+          const activeTab =
+            document.querySelector(".sidebar button.active") || uploadTab;
+          moveHighlight(activeTab);
+        }
+      };
+
+      // Hamburger menu functionality
+      const hamburger = document.getElementById("hamburger");
+      const sidebar = document.getElementById("sidebar");
+      const mobileOverlay = document.getElementById("mobileOverlay");
+
+      function toggleSidebar() {
+        hamburger.classList.toggle("active");
+        sidebar.classList.toggle("active");
+        mobileOverlay.style.display = sidebar.classList.contains("active")
+          ? "block"
+          : "none";
+      }
+
+      function closeSidebar() {
+        hamburger.classList.remove("active");
+        sidebar.classList.remove("active");
+        mobileOverlay.style.display = "none";
+      }
+
+      // Event listeners
+      hamburger.addEventListener("click", toggleSidebar);
+      mobileOverlay.addEventListener("click", closeSidebar);
+
+      // Close sidebar when clicking on a menu item (mobile only)
+      function addMobileMenuListeners() {
+        const menuItems = document.querySelectorAll(
+          ".sidebar button, .sidebar .logout-link"
+        );
+        menuItems.forEach((item) => {
+          item.addEventListener("click", function () {
+            if (window.innerWidth <= 700) {
+              setTimeout(closeSidebar, 300); // Small delay to show the click
+            }
+          });
+        });
+      }
+
+      // Initialize mobile menu listeners
+      addMobileMenuListeners();
+
+      async function loadUserLogs() {
+        const tbody = document.getElementById("userLogsTableBody");
+        tbody.innerHTML = "";
+        let logs = [];
+        try {
+          const res = await fetch("/supersecretadmin/list_user_logs");
+          logs = await res.json();
+          console.log("Fetched user logs:", logs);
+        } catch (err) {
+          console.error("Error fetching user logs:", err);
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td colspan="3" style="color:#e74c3c;text-align:center;">Error loading user logs.</td>`;
+          tbody.appendChild(tr);
+          return;
+        }
+        if (!Array.isArray(logs) || logs.length === 0) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td colspan="3" style="color:#888;text-align:center;">No user logs found.</td>`;
+          tbody.appendChild(tr);
+          return;
+        }
+        renderUserLogsTable(logs);
+      }
+
+      function renderUserLogsTable(logs) {
+        const tbody = document.getElementById("userLogsTableBody");
+        tbody.innerHTML = "";
+        logs.forEach((log, idx) => {
+          const tr = document.createElement("tr");
+          tr.style.background = idx % 2 === 0 ? "#f9fafb" : "#f4f6f8";
+          tr.style.transition =
+            "background 0.2s, box-shadow 0.2s, transform 0.2s";
+          tr.onmouseover = () => {
+            tr.style.background = "#ffe9b3";
+            tr.style.boxShadow = "0 2px 12px #ffd86b44";
+            tr.style.transform = "scale(1.012)";
+          };
+          tr.onmouseout = () => {
+            tr.style.background = idx % 2 === 0 ? "#f9fafb" : "#f4f6f8";
+            tr.style.boxShadow = "none";
+            tr.style.transform = "none";
+          };
+          // Show only first 2 matched files, then ...
+          let matchedFiles = Array.isArray(log.matched_files) ? log.matched_files : (log.matched_files ? [log.matched_files] : []);
+          let matchedDisplay = matchedFiles.slice(0,2).join(", ");
+          if (matchedFiles.length > 2) matchedDisplay += ", ...";
+          tr.innerHTML = `
+            <td style="padding:13px 10px;font-size:1.04em;">${log.email || ""}</td>
+            <td style="padding:13px 10px;font-size:1.04em;">${log.status || ""}</td>
+            <td style="padding:13px 10px;font-size:1.04em;max-width:180px;overflow-x:auto;">${matchedDisplay}</td>
+            <td style="padding:13px 10px;font-size:1.04em;">
+              ${log.zip_url ? `<a href="${log.zip_url}" target="_blank">Download</a>` : ""}
+            </td>
+            <td style="padding:13px 10px;font-size:1.04em;">${log.created_at ? new Date(log.created_at).toLocaleString() : ""}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Show username and password after adding admin
+      // Remove the alert for add admin, as the form is now a dedicated page/section
+    </script>
+    <script>
+      window.onbeforeunload = function () {
+        navigator.sendBeacon("/supersecretadmin/logout");
+      };
+    </script>
+    <script>
+      // Add JS for handling the change password form submission
+      document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const msg = document.getElementById('changePasswordMsg');
+        msg.textContent = '';
+        const current = document.getElementById('currentPassword').value;
+        const next = document.getElementById('newPassword').value;
+        const confirm = document.getElementById('confirmPassword').value;
+        if (next !== confirm) {
+          msg.textContent = 'New passwords do not match.';
+          msg.style.color = 'red';
+          return;
+        }
+        msg.textContent = 'Changing password...';
+        msg.style.color = '#007bff';
+        try {
+          // TODO: Replace with your backend endpoint
+          const res = await fetch('/admin/change_password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ current_password: current, new_password: next })
+          });
+          const data = await res.json();
+          if (data.status === 'ok') {
+            msg.textContent = '✅ Password changed successfully!';
+            msg.style.color = 'green';
+            document.getElementById('changePasswordForm').reset();
+          } else {
+            msg.textContent = '❌ ' + (data.message || 'Change failed.');
+            msg.style.color = 'red';
+          }
+        } catch (err) {
+          msg.textContent = '❌ Error changing password.';
+          msg.style.color = 'red';
+        }
+      });
+    </script>
+  </body>
+</html>
