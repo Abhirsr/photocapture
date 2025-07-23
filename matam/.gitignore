@@ -8,6 +8,7 @@ __pycache__/
 .env
 *.json
 venv/
+venv310/
 
 # OS-specific
 .DS_Store
