@@ -119,24 +119,45 @@ async function capture() {
 // ✉️ Show email input immediately
 function showEmailForm() {
   formSection.innerHTML = `
-        <p style="text-align:center; font-size: 18px;">📸 Captured! Enter your email to receive matched images.</p>
+        <p style="text-align:center; font-size: 18px;">📸 Captured! Enter your email and select event to receive matched images.</p>
         <input type="email" id="userEmail" placeholder="Enter your email" style="margin-top: 20px; padding: 10px; width: 100%; font-size: 16px;" required>
+        <select id="eventDropdown" style="margin-top: 10px; padding: 10px; width: 100%; font-size: 16px;" required>
+          <option value="" disabled selected>Select Event</option>
+        </select>
         <button onclick="storeEmail()" class="btn" style="margin-top: 15px;">✅ Confirm Email</button>
     `;
+  // Fetch events and populate dropdown
+  fetch('/list_events')
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        const dropdown = document.getElementById('eventDropdown');
+        data.events.forEach(event => {
+          const opt = document.createElement('option');
+          opt.value = event;
+          opt.textContent = event;
+          dropdown.appendChild(opt);
+        });
+      }
+    });
 }
 
 // ✅ Store email
 function storeEmail() {
   const email = document.getElementById("userEmail").value;
+  const eventName = document.getElementById("eventDropdown").value;
   if (!email || !email.includes("@")) {
     alert("Please enter a valid email.");
     return;
   }
-
+  if (!eventName) {
+    alert("Please select an event.");
+    return;
+  }
   fetch("/store_email", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: email, request_id: currentRequestId }),
+    body: JSON.stringify({ email: email, request_id: currentRequestId, event_name: eventName }),
   })
     .then((res) => res.json())
     .then((data) => {

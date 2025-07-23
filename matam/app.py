@@ -17,6 +17,7 @@ import tempfile
 import uuid
 import threading
 import time
+import base64
 
 load_dotenv()
 
@@ -26,6 +27,13 @@ MATCHED_FOLDER = 'static/matched'
 GALLERY_FOLDER = 'static/gallery'
 EMAIL_FLAG_FILE = 'stored_email.txt'
 EMAIL_SENT_FLAG = 'email_sent.flag'
+UPLOAD_TMP_DIR = 'tmp_frames'
+os.makedirs(UPLOAD_TMP_DIR, exist_ok=True)
+# Clean up all old temp frame folders on startup
+for folder in os.listdir(UPLOAD_TMP_DIR):
+    folder_path = os.path.join(UPLOAD_TMP_DIR, folder)
+    if os.path.isdir(folder_path):
+        shutil.rmtree(folder_path, ignore_errors=True)
 
 # --- Mail configuration ---
 mail_server = os.getenv('MAIL_SERVER')
@@ -252,6 +260,10 @@ def cleanup_old_gallery_images():
         now = time.time()
         cutoff = now - 30 * 24 * 60 * 60  # 30 days in seconds
         deleted = 0
+        if not os.path.exists(GALLERY_FOLDER):
+            print("[INFO] Gallery folder does not exist. Admin has to upload gallery folder.")
+            time.sleep(24 * 60 * 60)  # Wait a day before checking again
+            continue
         for fname in os.listdir(GALLERY_FOLDER):
             fpath = os.path.join(GALLERY_FOLDER, fname)
             if os.path.isfile(fpath):
@@ -271,7 +283,7 @@ uploaded_frames_store = {}
 @app.route('/upload_frames', methods=['POST'])
 def upload_frames():
     """
-    Receives frames (base64 images) from the frontend, stores them in memory under a request_id. Does NOT start matching yet.
+    Receives frames (base64 images) from the frontend, stores them on disk under a request_id. Does NOT start matching yet.
     """
     data = request.get_json()
     frames = data.get('frames', [])
@@ -283,64 +295,68 @@ def upload_frames():
     if not request_id:
         print("[ERROR] No request_id provided.")
         return jsonify(status='error', message='No request_id provided.'), 400
-    # Store frames in memory
-    uploaded_frames_store[request_id] = frames
-    print("[DEBUG] Frame upload complete for request_id=", request_id)
+    # Store frames on disk
+    req_dir = os.path.join(UPLOAD_TMP_DIR, request_id)
+    os.makedirs(req_dir, exist_ok=True)
+    for idx, frame in enumerate(frames):
+        if frame.startswith('data:image'):
+            header, b64data = frame.split(',', 1)
+        else:
+            b64data = frame
+        file_path = os.path.join(req_dir, f'frame_{idx+1:03d}.jpg')
+        with open(file_path, 'wb') as f:
+            f.write(base64.b64decode(b64data))
+    print(f"[DEBUG] Frame upload complete for request_id= {request_id}")
     return jsonify(status='ok')
 
 @app.route('/store_email', methods=['POST'])
 def store_email():
     """
-    Stores the user's email and request_id, then starts the matching process using the frames for that request_id.
+    Stores the user's email, request_id, and event_name, then starts the matching process using the frames for that request_id and event's gallery.
     """
     print('DEBUG: /store_email called')
     data = request.get_json()
     email = data.get('email')
     request_id = data.get('request_id')
-    print('DEBUG: email received:', email, 'request_id:', request_id)
-    if not email or not request_id:
-        print('DEBUG: No email or request_id provided')
-        return jsonify(status='error', message='No email or request_id provided.')
+    event_name = data.get('event_name')
+    print('DEBUG: email received:', email, 'request_id:', request_id, 'event_name:', event_name)
+    if not email or not request_id or not event_name:
+        print('DEBUG: Missing email, request_id, or event_name')
+        return jsonify(status='error', message='Missing email, request_id, or event_name.')
     # Insert user request into Supabase
     try:
         supabase.table('user_requests').insert({
             'id': request_id,
             'email': email,
             'status': 'pending',
-            'matched_files': []
+            'matched_files': [],
+            'event_name': event_name
         }).execute()
         print('DEBUG: Inserted user_request row')
-        # Call process_user_request in a background thread, passing the request_id and email
+        # Call process_user_request in a background thread, passing the request_id, email, and event_name
         import threading
         def run_matching():
             from match_faces import run_face_matching
             import cv2
             import numpy as np
-            import base64
-            import tempfile
-            # Retrieve frames from memory
-            frames = uploaded_frames_store.pop(request_id, None)
-            if not frames:
-                print(f"[ERROR] No frames found in memory for request_id={request_id}")
+            import shutil
+            # Load frames from disk
+            req_dir = os.path.join(UPLOAD_TMP_DIR, request_id)
+            if not os.path.exists(req_dir):
+                print(f"[ERROR] No frames found on disk for request_id={request_id}")
                 supabase.table('user_requests').update({'status': 'no_frames'}).eq('id', request_id).execute()
                 return
-            # Save frames to a temporary directory for compatibility with run_face_matching
-            with tempfile.TemporaryDirectory() as tmpdir:
-                for idx, frame in enumerate(frames):
-                    if frame.startswith('data:image'):
-                        header, b64data = frame.split(',', 1)
-                    else:
-                        b64data = frame
-                    file_path = os.path.join(tmpdir, f'frame_{idx+1:03d}.jpg')
-                    with open(file_path, 'wb') as f:
-                        f.write(base64.b64decode(b64data))
-                match_count = run_face_matching(tmpdir)
-                if match_count == 0:
-                    print("[ERROR] No face detected or no matches found.")
-                    supabase.table('user_requests').update({'status': 'no_face'}).eq('id', request_id).execute()
-                    return
-                # Continue with the rest of the pipeline (email, etc.)
-                process_pending_request_async()
+            # Use the selected event's gallery folder
+            event_gallery_folder = os.path.join(GALLERY_FOLDER, event_name)
+            match_count = run_face_matching(req_dir, event_gallery_folder)
+            # Clean up temp frames
+            shutil.rmtree(req_dir, ignore_errors=True)
+            if match_count == 0:
+                print("[ERROR] No face detected or no matches found.")
+                supabase.table('user_requests').update({'status': 'no_face'}).eq('id', request_id).execute()
+                return
+            # Continue with the rest of the pipeline (email, etc.)
+            process_pending_request_async()
         threading.Thread(target=run_matching, daemon=True).start()
     except Exception as e:
         print('DEBUG: Exception occurred:', e)
@@ -463,15 +479,19 @@ def list_user_logs():
 def admin_upload_gallery():
     """
     (Admin) Handles file uploads to the gallery.
-    Supports zip file upload or multiple file uploads.
+    Supports zip file upload or multiple file uploads, organized by event name.
     Returns:
         JSON: {status: 'ok'} on success, or error message.
     """
     if not is_admin_logged_in():
         return jsonify(status='error', message='Not authorized'), 403
     try:
-        # Only create the gallery folder if it does not exist; do not delete existing images
-        os.makedirs(GALLERY_FOLDER, exist_ok=True)
+        event_name = request.form.get('event_name') or request.values.get('event_name')
+        if not event_name:
+            return jsonify(status='error', message='Event name is required.')
+        event_name = secure_filename(event_name.strip())
+        event_gallery_folder = os.path.join(GALLERY_FOLDER, event_name)
+        os.makedirs(event_gallery_folder, exist_ok=True)
 
         # Check for zip upload
         if 'gallery_zip' in request.files:
@@ -480,7 +500,7 @@ def admin_upload_gallery():
                 zip_file.save(tmp_zip)
                 tmp_zip_path = tmp_zip.name
             with zipfile.ZipFile(tmp_zip_path, 'r') as zip_ref:
-                zip_ref.extractall(GALLERY_FOLDER)
+                zip_ref.extractall(event_gallery_folder)
             os.remove(tmp_zip_path)
             return jsonify(status='ok')
 
@@ -494,7 +514,7 @@ def admin_upload_gallery():
                 if ext not in ALLOWED_EXTENSIONS:
                     continue  # Skip non-image files
                 unique_name = f"gallery_{int(time.time())}_{uuid.uuid4().hex[:8]}{ext}"
-                dest_path = os.path.join(GALLERY_FOLDER, unique_name)
+                dest_path = os.path.join(event_gallery_folder, unique_name)
                 f.save(dest_path)
             return jsonify(status='ok')
 
@@ -631,6 +651,18 @@ def admin_change_password():
         return jsonify({'status': 'ok'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': 'Failed to change password.'}), 500
+
+@app.route('/list_events')
+def list_events():
+    """
+    Returns a JSON list of all event names (subfolders in static/gallery/).
+    """
+    try:
+        event_names = [d for d in os.listdir(GALLERY_FOLDER)
+                      if os.path.isdir(os.path.join(GALLERY_FOLDER, d)) and not d.startswith('.')]
+        return jsonify(status='ok', events=event_names)
+    except Exception as e:
+        return jsonify(status='error', message=str(e))
 
 if __name__ == '__main__':
     app.run(debug=True,port=5002)

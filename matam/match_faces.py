@@ -8,14 +8,13 @@ import os
 import shutil
 import time
 
-def run_face_matching(reference_frames_dir):
+def run_face_matching(reference_frames_dir, gallery_folder):
     """
-    Given a directory of reference frames (images), extract face encodings and match against gallery images.
+    Given a directory of reference frames (images), extract face encodings and match against gallery images in the specified gallery_folder.
     Saves matched images to MATCHED_FOLDER as before.
     """
     # --- Config ---
     MATCH_THRESHOLD = 0.45
-    GALLERY_FOLDER = "static/gallery"
     MATCHED_FOLDER = "static/matched"
 
     # --- Prepare matched_faces folder ---
@@ -48,8 +47,8 @@ def run_face_matching(reference_frames_dir):
 
     # --- Step 3: Match Against Group Photos ---
     match_count = 0
-    for filename in os.listdir(GALLERY_FOLDER):
-        path = os.path.join(GALLERY_FOLDER, filename)
+    for filename in os.listdir(gallery_folder):
+        path = os.path.join(gallery_folder, filename)
         img_bgr = cv2.imread(path)
         if img_bgr is None:
             continue
@@ -108,4 +107,4 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as tmpdir:
         for idx, frame in enumerate(captured_frames):
             cv2.imwrite(os.path.join(tmpdir, f'frame_{idx+1:03d}.jpg'), frame)
-        run_face_matching(tmpdir)
+        run_face_matching(tmpdir, "static/gallery")

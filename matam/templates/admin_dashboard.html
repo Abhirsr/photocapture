@@ -551,6 +551,7 @@
         <div class="glass-section active" id="upload-gallery-section">
           <h2>Upload Gallery (Zip or Folder)</h2>
           <form id="galleryUploadForm" enctype="multipart/form-data">
+            <input type="text" id="eventNameInput" name="event_name" placeholder="Enter Event Name (required)" required style="margin-bottom: 10px;" />
             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
               <button type="button" id="chooseImagesBtn" class="btn upload-btn" style="flex:1;">Upload Images/Zip</button>
               <button type="button" id="chooseFolderBtn" class="btn upload-btn" style="flex:1;">Upload Folder</button>
@@ -592,12 +593,19 @@
           document.getElementById('galleryUploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const msg = document.getElementById('galleryUploadMsg');
+            const eventName = document.getElementById('eventNameInput').value.trim();
+            if (!eventName) {
+              msg.textContent = 'Please enter an event name.';
+              msg.style.color = 'red';
+              return;
+            }
             if (!galleryInput.files.length) {
               msg.textContent = 'Please select files or a folder.';
               msg.style.color = 'red';
               return;
             }
             const formData = new FormData();
+            formData.append('event_name', eventName);
             if (lastUploadMode === 'images' && galleryInput.files.length === 1 && galleryInput.files[0].name.endsWith('.zip')) {
               formData.append('gallery_zip', galleryInput.files[0]);
             } else if (lastUploadMode === 'folder') {
