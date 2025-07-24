@@ -526,16 +526,27 @@ def admin_upload_gallery():
 @app.route('/admin/list_gallery_images')
 def admin_list_gallery_images():
     """
-    (Admin) Lists all images in the gallery folder.
+    (Admin) Lists all images in the gallery folder, event-wise.
+    Query param: event (optional) - if provided, lists images for that event; else, lists available events.
     Returns:
-        JSON: List of image filenames.
+        JSON: {status: 'ok', events: [...]} or {status: 'ok', images: [...], event: ...}
     """
     if not is_admin_logged_in():
         return jsonify(status='error', message='Not authorized'), 403
+    event = request.args.get('event')
     try:
-        images = [f for f in os.listdir(GALLERY_FOLDER)
-                  if os.path.isfile(os.path.join(GALLERY_FOLDER, f)) and f.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'))]
-        return jsonify(status='ok', images=images)
+        if event:
+            event_folder = os.path.join(GALLERY_FOLDER, event)
+            if not os.path.exists(event_folder) or not os.path.isdir(event_folder):
+                return jsonify(status='error', message='Event not found')
+            images = [f for f in os.listdir(event_folder)
+                      if os.path.isfile(os.path.join(event_folder, f)) and f.lower().endswith((
+                          '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'))]
+            return jsonify(status='ok', images=images, event=event)
+        else:
+            events = [d for d in os.listdir(GALLERY_FOLDER)
+                      if os.path.isdir(os.path.join(GALLERY_FOLDER, d)) and not d.startswith('.')]
+            return jsonify(status='ok', events=events)
     except Exception as e:
         return jsonify(status='error', message=str(e))
 

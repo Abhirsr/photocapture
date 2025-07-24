@@ -649,41 +649,24 @@
             "
           >
             <b>Gallery Images:</b>
-            {% if gallery_images %}
-            <span style="color: #27ae60; font-weight: 600"
-              >({{ gallery_images|length }}) images present</span
-            >
-            <div
-              style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px"
-            >
-              {% for img in gallery_images[:6] %}
-              <img
-                src="{{ url_for('static', filename='gallery/' ~ img) }}"
-                alt="gallery image"
-                style="
-                  width: 48px;
-                  height: 48px;
-                  object-fit: cover;
-                  border-radius: 6px;
-                  box-shadow: 0 1px 4px rgba(44, 62, 80, 0.1);
-                "
-              />
-              {% endfor %} {% if gallery_images|length > 6 %}
-              <span style="align-self: center; font-size: 1.1em; color: #888"
-                >+{{ gallery_images|length-6 }} more</span
-              >
-              {% endif %}
+            <span id="uploadGalleryEventSpan"></span>
+            <div style="margin: 8px 0;">
+              <label for="uploadEventSelect"><b>Select Event:</b></label>
+              <select id="uploadEventSelect" style="margin-left: 8px; padding: 4px 10px; border-radius: 6px; border: 1px solid #ccc;"></select>
             </div>
-            {% else %}
-            <span style="color: #e74c3c; font-weight: 600"
-              >No images in gallery</span
-            >
-            {% endif %}
+            <span id="uploadGalleryCount" style="color: #27ae60; font-weight: 600"></span>
+            <div id="uploadGalleryPreview" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px"></div>
+            <span id="uploadGalleryMore" style="align-self: center; font-size: 1.1em; color: #888"></span>
+            <span id="uploadGalleryNone" style="color: #e74c3c; font-weight: 600"></span>
           </div>
         </div>
         <!-- # Manage Gallery Section (Dropdown: Manage Gallery) -->
         <div class="glass-section" id="gallery-management-section">
           <h2>Manage Gallery Images</h2>
+          <div style="margin-bottom: 12px;">
+            <label for="eventSelect"><b>Select Event:</b></label>
+            <select id="eventSelect" style="margin-left: 8px; padding: 6px 12px; border-radius: 6px; border: 1px solid #ccc;"></select>
+          </div>
           <div
             id="galleryGrid"
             style="width: 100%; max-width: 900px; margin: 0 auto 24px auto;display:ruby;"
@@ -691,19 +674,51 @@
           <div id="galleryMsg" style="margin-bottom: 10px"></div>
         </div>
         <script>
-          async function loadGalleryImages() {
+          async function loadEventsAndGallery() {
+            const eventSelect = document.getElementById("eventSelect");
+            const grid = document.getElementById("galleryGrid");
+            const msg = document.getElementById("galleryMsg");
+            eventSelect.innerHTML = '';
+            grid.innerHTML = '';
+            msg.textContent = '';
+            try {
+              const res = await fetch("/admin/list_gallery_images", { credentials: "same-origin" });
+              const data = await res.json();
+              if (data.status === "ok" && data.events && data.events.length > 0) {
+                data.events.forEach(eventName => {
+                  const opt = document.createElement('option');
+                  opt.value = eventName;
+                  opt.textContent = eventName;
+                  eventSelect.appendChild(opt);
+                });
+                // Load images for the first event by default
+                loadGalleryImages(eventSelect.value);
+              } else {
+                msg.textContent = "No events found. Upload images to create an event.";
+              }
+            } catch (err) {
+              msg.textContent = "❌ Error loading events.";
+            }
+            eventSelect.onchange = function() {
+              loadGalleryImages(eventSelect.value);
+            };
+          }
+
+          async function loadGalleryImages(eventName) {
             const grid = document.getElementById("galleryGrid");
             const msg = document.getElementById("galleryMsg");
             grid.innerHTML = "";
             msg.textContent = "";
+            if (!eventName) {
+              msg.textContent = "No event selected.";
+              return;
+            }
             try {
-              const res = await fetch("/admin/list_gallery_images", {
-                credentials: "same-origin",
-              });
+              const res = await fetch(`/admin/list_gallery_images?event=${encodeURIComponent(eventName)}`, { credentials: "same-origin" });
               const data = await res.json();
               if (data.status === "ok") {
-                if (data.images.length === 0) {
-                  msg.textContent = "No images in gallery.";
+                if (!data.images || data.images.length === 0) {
+                  msg.textContent = "No images in this event gallery.";
                   return;
                 }
                 data.images.forEach((filename) => {
@@ -722,7 +737,7 @@
                   card.style.marginBottom = "8px";
 
                   const img = document.createElement("img");
-                  img.src = "/static/gallery/" + encodeURIComponent(filename);
+                  img.src = `/static/gallery/${encodeURIComponent(eventName)}/${encodeURIComponent(filename)}`;
                   img.alt = filename;
                   img.style.maxWidth = "100%";
                   img.style.maxHeight = "100%";
@@ -754,7 +769,7 @@
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       credentials: "same-origin",
-                      body: JSON.stringify({ filename }),
+                      body: JSON.stringify({ filename: `${eventName}/${filename}` })
                     });
                     const result = await resp.json();
                     if (result.status === "ok") {
@@ -770,7 +785,6 @@
                   card.appendChild(delBtn);
 
                   grid.appendChild(card);
-                  console.log("Added card for:", filename);
                 });
               } else {
                 msg.textContent =
@@ -780,8 +794,8 @@
               msg.textContent = "❌ Error loading images.";
             }
           }
-          // Load gallery images on page load
-          // window.addEventListener("DOMContentLoaded", loadGalleryImages);
+          // Load events and gallery images on page load
+          window.addEventListener("DOMContentLoaded", loadEventsAndGallery);
         </script>
         <!-- # User Logs Section (Dropdown: User Logs) -->
         <div
@@ -999,7 +1013,7 @@
             .getElementById("gallery-management-section")
             .classList.add("active");
           if (!isMobile) moveHighlight(galleryTab);
-          loadGalleryImages();
+          loadEventsAndGallery(); // Changed to loadEventsAndGallery
         } else if (section === "userLogs") {
           userLogsTab.classList.add("active");
           const userLogsSection = document.getElementById("userLogsSection");
@@ -1201,6 +1215,86 @@
           msg.style.color = 'red';
         }
       });
+    </script>
+    <script>
+      async function loadUploadGalleryEventsAndPreview() {
+        const eventSelect = document.getElementById("uploadEventSelect");
+        const preview = document.getElementById("uploadGalleryPreview");
+        const countSpan = document.getElementById("uploadGalleryCount");
+        const moreSpan = document.getElementById("uploadGalleryMore");
+        const noneSpan = document.getElementById("uploadGalleryNone");
+        eventSelect.innerHTML = '';
+        preview.innerHTML = '';
+        countSpan.textContent = '';
+        moreSpan.textContent = '';
+        noneSpan.textContent = '';
+        try {
+          const res = await fetch("/admin/list_gallery_images", { credentials: "same-origin" });
+          const data = await res.json();
+          if (data.status === "ok" && data.events && data.events.length > 0) {
+            data.events.forEach(eventName => {
+              const opt = document.createElement('option');
+              opt.value = eventName;
+              opt.textContent = eventName;
+              eventSelect.appendChild(opt);
+            });
+            loadUploadGalleryPreview(eventSelect.value);
+          } else {
+            noneSpan.textContent = "No images in gallery";
+          }
+        } catch (err) {
+          noneSpan.textContent = "❌ Error loading events.";
+        }
+        eventSelect.onchange = function() {
+          loadUploadGalleryPreview(eventSelect.value);
+        };
+      }
+
+      async function loadUploadGalleryPreview(eventName) {
+        const preview = document.getElementById("uploadGalleryPreview");
+        const countSpan = document.getElementById("uploadGalleryCount");
+        const moreSpan = document.getElementById("uploadGalleryMore");
+        const noneSpan = document.getElementById("uploadGalleryNone");
+        preview.innerHTML = '';
+        countSpan.textContent = '';
+        moreSpan.textContent = '';
+        noneSpan.textContent = '';
+        if (!eventName) {
+          noneSpan.textContent = "No event selected.";
+          return;
+        }
+        try {
+          const res = await fetch(`/admin/list_gallery_images?event=${encodeURIComponent(eventName)}`, { credentials: "same-origin" });
+          const data = await res.json();
+          if (data.status === "ok" && data.images) {
+            countSpan.textContent = `(${data.images.length}) images present`;
+            if (data.images.length === 0) {
+              noneSpan.textContent = "No images in gallery";
+              return;
+            }
+            data.images.slice(0, 6).forEach(img => {
+              const imageElem = document.createElement('img');
+              imageElem.src = `/static/gallery/${encodeURIComponent(eventName)}/${encodeURIComponent(img)}`;
+              imageElem.alt = "gallery image";
+              imageElem.style.width = "48px";
+              imageElem.style.height = "48px";
+              imageElem.style.objectFit = "cover";
+              imageElem.style.borderRadius = "6px";
+              imageElem.style.boxShadow = "0 1px 4px rgba(44, 62, 80, 0.1)";
+              preview.appendChild(imageElem);
+            });
+            if (data.images.length > 6) {
+              moreSpan.textContent = `+${data.images.length - 6} more`;
+            }
+          } else {
+            noneSpan.textContent = "No images in gallery";
+          }
+        } catch (err) {
+          noneSpan.textContent = "❌ Error loading images.";
+        }
+      }
+      // Load upload gallery preview on page load
+      window.addEventListener("DOMContentLoaded", loadUploadGalleryEventsAndPreview);
     </script>
   </body>
 </html>
